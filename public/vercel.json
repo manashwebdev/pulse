@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://pulse-hgna.onrender.com/api/:path*" },
+    { "source": "/status/:id", "destination": "https://pulse-hgna.onrender.com/status/:id" }
+  ]
+}
