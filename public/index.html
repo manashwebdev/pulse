@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pulse: keep your free-tier apps awake</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#020604;--panel:rgba(0,255,102,.045);--line:rgba(0,255,102,.24);--tx:#d9ffe8;--mu:#86c9a2;--ok:#00ff66;--warn:#ffc83d;--bad:#ff4d5e;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100vh;color:var(--tx);font:500 14.5px/1.6 "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;background:var(--bg)}
+#rain{position:fixed;inset:0;z-index:0;opacity:.24;pointer-events:none}
+body::after{content:"";position:fixed;inset:0;z-index:5;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);animation:flick 6s infinite}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0,rgba(0,255,102,.13),transparent 60%),radial-gradient(ellipse at 50% 120%,rgba(0,255,102,.08),transparent 55%)}
+@keyframes flick{0%,96%,100%{opacity:1}97%{opacity:.7}98%{opacity:1}99%{opacity:.8}}
+.wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding:28px 18px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:26px}
+.logo{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--ok);text-shadow:0 0 14px rgba(0,255,102,.8),0 0 40px rgba(0,255,102,.35)}
+.logo::after{content:"_";animation:cur 1s steps(1) infinite}
+@keyframes cur{50%{opacity:0}}
+.beat{width:14px;height:14px;border-radius:50%;background:var(--ok);animation:beat 1.8s infinite}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(0,255,102,.7),0 0 18px rgba(0,255,102,.9)}70%{box-shadow:0 0 0 16px rgba(0,255,102,0),0 0 18px rgba(0,255,102,.9)}100%{box-shadow:0 0 0 0 rgba(0,255,102,0),0 0 18px rgba(0,255,102,.9)}}
+.note{color:var(--mu);font-size:13px;max-width:440px;min-height:42px}
+.note::before{content:"$ ";color:var(--ok)}
+.glass{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:inset 0 0 24px rgba(0,255,102,.05),0 0 26px rgba(0,255,102,.08),0 10px 40px rgba(0,0,0,.6)}
+.card::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--ok),transparent);filter:drop-shadow(0 0 6px var(--ok));transform:translateX(-100%);animation:scan 4.5s ease-in-out infinite}
+@keyframes scan{0%{transform:translateX(-100%)}55%,100%{transform:translateX(100%)}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{padding:16px 18px;transition:box-shadow .3s,border-color .3s}
+.stat:hover{border-color:rgba(0,255,102,.6);box-shadow:inset 0 0 24px rgba(0,255,102,.08),0 0 34px rgba(0,255,102,.25)}
+.stat b{display:block;font-size:26px;font-weight:700;color:var(--ok);text-shadow:0 0 16px rgba(0,255,102,.75)}
+.stat span{color:var(--mu);font-size:13px}
+form.add{display:flex;gap:10px;padding:12px;margin-bottom:22px;flex-wrap:wrap}
+input,select{flex:1 1 150px;min-width:0;background:rgba(0,0,0,.55);border:1px solid var(--line);border-radius:10px;color:var(--tx);padding:11px 14px;font:500 14px "JetBrains Mono",ui-monospace,monospace;outline:none;transition:border-color .25s,box-shadow .25s}
+input::placeholder{color:#5f9b79}
+input.url{flex:2 1 240px}
+input:focus,select:focus{border-color:var(--ok);box-shadow:0 0 0 3px rgba(0,255,102,.15),0 0 20px rgba(0,255,102,.25)}
+button,.btn{font:600 13.5px "JetBrains Mono",ui-monospace,monospace;color:var(--ok);background:rgba(0,255,102,.07);border:1px solid rgba(0,255,102,.4);border-radius:10px;padding:10px 16px;cursor:pointer;transition:transform .15s,background .25s,box-shadow .25s,color .25s}
+button:hover,.btn:hover{background:var(--ok);color:#021008;box-shadow:0 0 26px rgba(0,255,102,.7)}
+button:active,.btn:active{transform:scale(.96)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+button.main,.btn.main{background:var(--ok);color:#021008;border-color:var(--ok);box-shadow:0 0 22px rgba(0,255,102,.55)}
+button.main:hover,.btn.main:hover{background:#7dffb3;box-shadow:0 0 40px rgba(0,255,102,.9)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.card{padding:18px;transition:border-color .3s,box-shadow .3s,transform .3s}
+.card:hover{border-color:rgba(0,255,102,.65);transform:translateY(-3px);box-shadow:inset 0 0 24px rgba(0,255,102,.07),0 0 38px rgba(0,255,102,.28),0 14px 40px rgba(0,0,0,.6)}
+.card.fresh{animation:rise .6s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.96);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.name{font-size:16.5px;font-weight:700;overflow-wrap:anywhere}
+.url{color:var(--mu);font-size:12.5px;overflow-wrap:anywhere}
+.pill{flex:none;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid;display:flex;align-items:center;gap:6px}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+.up{color:var(--ok);border-color:rgba(0,255,102,.5);background:rgba(0,255,102,.1);text-shadow:0 0 8px rgba(0,255,102,.7)}
+.waking{color:var(--warn);border-color:rgba(255,200,61,.45);background:rgba(255,200,61,.09)}
+.down{color:var(--bad);border-color:rgba(255,77,94,.5);background:rgba(255,77,94,.1)}
+.nums{display:flex;gap:20px;margin:14px 0 6px;flex-wrap:wrap}
+.nums div{font-size:12.5px;color:var(--mu)}
+.nums b{display:block;color:var(--tx);font-size:18px;font-weight:700}
+svg.spark{width:100%;height:50px;display:block;margin:6px 0 10px;overflow:visible}
+.spark polyline{fill:none;stroke:var(--ok);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(0,255,102,.9))}
+.bars{display:flex;gap:3px;height:26px;margin-bottom:14px}
+.bars i{flex:1;border-radius:2px;background:var(--ok);box-shadow:0 0 8px rgba(0,255,102,.55);transition:transform .2s,box-shadow .2s}
+.bars i.cold{background:var(--warn);box-shadow:0 0 8px rgba(255,200,61,.6)}.bars i.bad{background:var(--bad);box-shadow:0 0 8px rgba(255,77,94,.7)}
+.bars i:hover{transform:scaleY(1.2);box-shadow:0 0 16px currentColor}
+.bars i:last-child{box-shadow:0 0 14px var(--ok),0 0 4px #fff}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts button{padding:7px 11px;font-size:12.5px}
+.empty{padding:36px;text-align:center;color:var(--mu)}
+.modal{position:fixed;inset:0;z-index:9;background:rgba(0,6,2,.78);backdrop-filter:blur(7px);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top)) 14px 24px;overflow-y:auto;animation:fade .3s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheet{width:100%;max-width:640px;padding:26px;background:rgba(2,14,7,.9);animation:rise .45s cubic-bezier(.2,.8,.2,1)}
+.sheet h2{margin:0 0 4px;font-size:24px;color:var(--ok);text-shadow:0 0 14px rgba(0,255,102,.7)}
+.banner{margin:18px 0;padding:15px 18px;border-radius:12px;font-weight:700;font-size:15px;border:1px solid}
+.sheet h3{font-size:14px;margin:22px 0 8px;color:var(--mu)}
+.sheet .bars{height:34px}
+.inc{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px;color:var(--mu)}
+.inc b{color:var(--tx)}
+.link{display:flex;gap:8px;align-items:center;margin-top:6px}
+.link code{flex:1;min-width:0;overflow-wrap:anywhere;background:rgba(0,0,0,.6);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:var(--ok)}
+.legend{display:flex;gap:16px;color:var(--mu);font-size:12.5px;margin-top:8px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:var(--c);box-shadow:0 0 8px var(--c)}
+.btn{display:inline-block;text-decoration:none}
+.view{display:none}.view.on{display:block;animation:fade .45s}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:54px}
+.acts.c{justify-content:center}
+.hero{text-align:center}
+.hero h1{font-size:clamp(32px,6.2vw,58px);line-height:1.12;margin:0 0 18px;letter-spacing:-.03em;text-shadow:0 0 26px rgba(0,255,102,.55)}
+.hero p{max-width:560px;margin:0 auto 26px;color:var(--mu);font-size:16px}
+.term{max-width:640px;margin:44px auto 0;text-align:left;padding:0}
+.tbar{padding:11px 16px;border-bottom:1px solid var(--line);color:var(--mu);font-size:12.5px}
+.tbar::before{content:"$ ";color:var(--ok)}
+#log{padding:14px 16px;height:190px;overflow:hidden;font-size:13px}
+#log div{animation:fade .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#log .w{color:var(--warn)}#log .b{color:var(--bad)}#log span{color:var(--ok)}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:56px}
+.f{padding:20px;transition:transform .3s,box-shadow .3s,border-color .3s}
+.f:hover{transform:translateY(-4px);border-color:rgba(0,255,102,.65);box-shadow:0 0 36px rgba(0,255,102,.28)}
+.f b{display:block;color:var(--ok);margin-bottom:6px;font-size:16px;text-shadow:0 0 12px rgba(0,255,102,.6)}
+.f span{color:var(--mu);font-size:13.5px}
+.authwrap{max-width:410px;margin:6vh auto 0;display:flex;flex-direction:column;gap:22px;align-items:center}
+.authbox{width:100%;padding:28px;animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+.authbox h2{margin:0 0 4px;font-size:23px;color:var(--ok);text-shadow:0 0 14px rgba(0,255,102,.7)}
+.authbox form{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+.authbox input{flex:none}
+.sub{color:var(--mu);font-size:13px;margin:0}
+a{color:var(--ok)}
+.err{color:var(--bad);font-size:13px;min-height:18px}
+.who{color:var(--mu);font-size:13px}
+.who::before{content:"> ";color:var(--ok)}
+header .acts{align-items:center}
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+.tab.on{background:var(--ok);color:#021008;box-shadow:0 0 22px rgba(0,255,102,.55)}
+#monitors>.note,#github>.note{margin-bottom:16px;min-height:0}
+.sk{height:150px;background:linear-gradient(100deg,rgba(0,255,102,.03) 30%,rgba(0,255,102,.14) 50%,rgba(0,255,102,.03) 70%) 0 0/300% 100%;animation:sh 1.2s linear infinite}
+@keyframes sh{to{background-position:-300% 0}}
+.ghhead{margin-bottom:14px;color:var(--mu)}.ghhead b{color:var(--ok)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;color:var(--mu);font-size:12.5px;margin:12px 0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--c);box-shadow:0 0 8px var(--c)}
+.back{text-decoration:none}
+@media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body><canvas id="rain"></canvas><div class="wrap">
+<section id="landing" class="view">
+<nav class="nav"><div class="logo"><span class="beat"></span>Pulse</div><div class="acts"><a class="btn" href="#/login">Log in</a><a class="btn main" href="#/signup">Get started</a></div></nav>
+<div class="hero"><h1>Your free apps fall asleep.<br>Pulse keeps them awake.</h1>
+<p>Ping your Render and Railway apps on a schedule, watch uptime and response time live, and share a public status page.</p>
+<div class="acts c"><a class="btn main" href="#/signup">Start monitoring free</a><a class="btn" href="#/login">I have an account</a></div>
+<div class="term glass"><div class="tbar">pulse monitor --all</div><div id="log"></div></div></div>
+<div class="feats">
+<div class="glass f"><b>Keep-alive pings</b><span>Hit your app on a schedule so free hosting never puts it to sleep.</span></div>
+<div class="glass f"><b>Live charts</b><span>Uptime and response time for every app, updated as checks come in.</span></div>
+<div class="glass f"><b>Public status pages</b><span>Share one link so clients can see that your app is healthy.</span></div>
+<div class="glass f"><b>GitHub import</b><span>Enter a username, see every repo, and monitor the deployed ones.</span></div>
+</div></section>
+<section id="auth" class="view"><div class="authwrap"><a class="logo back" href="#/"><span class="beat"></span>Pulse</a><div class="glass authbox" id="authbox"></div></div></section>
+<section id="app" class="view">
+<header><div class="logo"><span class="beat"></span>Pulse</div><div class="acts"><span class="who" id="who"></span><button id="out">Log out</button></div></header>
+<div class="tabs"><button class="tab on" data-tab="monitors">Monitors</button><button class="tab" data-tab="github">GitHub repos</button></div>
+<div id="monitors"><div class="note">Live mode: the server pings your apps every few minutes, even when this tab is closed.</div>
+<section class="stats" id="stats"></section>
+<form class="add glass" id="add">
+  <input id="n" placeholder="App name" required maxlength="40" aria-label="App name">
+  <input id="u" class="url" type="url" placeholder="https://my-app.onrender.com" required aria-label="App URL">
+  <select id="k" aria-label="Hosting type"><option value="1">Sleeps when idle (Render, Railway)</option><option value="0">Always on</option></select>
+  <button class="main" type="submit">Add monitor</button>
+</form>
+<section class="grid" id="grid"></section>
+</div>
+<div id="github" style="display:none"><form class="add glass" id="gh"><input id="gu" placeholder="GitHub username, like manashwebdev" required maxlength="39" aria-label="GitHub username"><button class="main" type="submit">Scan repos</button></form>
+<div class="note">Repos come from the GitHub API through your server. The token stays in the server .env and never reaches the browser.</div><div id="ghout" style="margin-top:16px"></div></div>
+</section></div>
+<div id="modal"></div>
+<script>
+const $=s=>document.querySelector(s),KEY='pulse.monitors.v1';
+let M=[],fresh=new Set(),openId=null,tok=localStorage.getItem('pulse.token');
+function logout(){tok=null;try{localStorage.removeItem('pulse.token');localStorage.removeItem('pulse.session')}catch(e){}location.hash='#/'}
+async function api(p,o={}){const r=await fetch('/api'+p,{method:o.method||'GET',headers:{'Content-Type':'application/json',...(tok?{Authorization:'Bearer '+tok}:{})},body:o.body?JSON.stringify(o.body):undefined});const j=await r.json().catch(()=>({}));if(r.status===401&&!p.startsWith('/auth'))logout();if(!r.ok)throw new Error(j.error||'Request failed');return j}
+async function load(){try{M=(await api('/monitors')).map(m=>({...m,id:m._id}));render()}catch(e){}}
+
+const mk=(name,url,sleepy,flaky=.02)=>({id:Math.random().toString(36).slice(2,8),name,url,sleepy,flaky,down:false,checks:[]});
+function check(m,force){
+  let ok=true,ms=Math.round(90+Math.random()*170),cold=false;
+  if(m.down||(!force&&Math.random()<m.flaky)){ok=false;ms=0}
+  else if(force||(m.sleepy&&Math.random()<.06)){ms=Math.round(5200+Math.random()*3500);cold=true}
+  m.checks.push({ok,ms,cold,t:Date.now()});if(m.checks.length>60)m.checks.shift();
+}
+const save=()=>{};
+function info(m){
+  const c=m.checks,last=c[c.length-1]||{ok:true,ms:0},okc=c.filter(x=>x.ok);
+  const up=c.length?okc.length/c.length*100:100,avg=okc.length?Math.round(okc.reduce((a,x)=>a+x.ms,0)/okc.length):0;
+  const st=!last.ok?'down':(last.cold?'waking':'up');
+  return{up,avg,last,st,label:{up:'Operational',waking:'Waking up',down:'Down'}[st]};
+}
+function incidents(m){
+  const out=[];let cur=null;
+  m.checks.forEach(x=>{if(!x.ok){if(!cur){cur={t:x.t,n:0};out.push(cur)}cur.n++}else cur=null});
+  return out.slice(-4).reverse();
+}
+const bars=(m,n)=>m.checks.slice(-n).map(x=>`<i class="${x.ok?(x.cold?'cold':''):'bad'}" title="${x.ok?x.ms+' ms'+(x.cold?' (cold start)':''):'Failed'}"></i>`).join('');
+function spark(m){
+  const c=m.checks.slice(-40);if(c.length<2)return'';
+  const pts=c.map((x,i)=>`${(i/(c.length-1)*120).toFixed(1)},${x.ok?(40-Math.min(x.ms,1000)/1000*36).toFixed(1):40}`).join(' ');
+  return`<svg class="spark" viewBox="0 0 120 44" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00ff66" stop-opacity=".35"/><stop offset="1" stop-color="#00ff66" stop-opacity="0"/></linearGradient></defs><polygon points="0,44 ${pts} 120,44" fill="url(#g)"/><polyline vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug=m=>m.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||m.id;
+function render(){
+  const I=M.map(info),total=M.length;
+  const allUp=total?I.reduce((a,x)=>a+x.up,0)/total:100,avg=total?Math.round(I.reduce((a,x)=>a+x.avg,0)/total):0,bad=I.filter(x=>x.st==='down').length;
+  $('#stats').innerHTML=[[total,'Apps monitored'],[allUp.toFixed(2)+'%','Overall uptime'],[avg+' ms','Average response'],[bad?bad+' down':'All clear','Current status']].map(s=>`<div class="stat glass"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('');
+  $('#grid').innerHTML=total?M.map((m,i)=>{const x=I[i];return`<article class="card glass ${fresh.has(m.id)?'fresh':''}" style="animation-delay:${i*90}ms">
+    <div class="top"><div><div class="name">${esc(m.name)}</div><div class="url">${esc(m.url)}</div></div><span class="pill ${x.st}"><i></i>${x.label}</span></div>
+    <div class="nums"><div><b>${x.up.toFixed(1)}%</b>Uptime</div><div><b>${x.last.ok?x.last.ms+' ms':'No reply'}</b>Last check</div><div><b>${x.avg} ms</b>Average</div></div>
+    ${spark(m)}<div class="bars">${bars(m,30)}</div>
+    <div class="acts"><button data-a="open" data-id="${m.id}">Status page</button><button data-a="wake" data-id="${m.id}">Wake now</button><button data-a="del" data-id="${m.id}">Remove</button></div></article>`}).join(''):'<div class="empty glass">No monitors yet. Add your first app above and Pulse starts checking it right away.</div>';
+  fresh.clear();renderModal();
+}
+function renderModal(){
+  const m=M.find(x=>x.id===openId);if(!m){$('#modal').innerHTML='';return}
+  const x=info(m),inc=incidents(m),pub=`${location.origin}/status/${m.id}`;
+  const cls={up:'up',waking:'waking',down:'down'}[x.st];
+  $('#modal').innerHTML=`<div class="modal" data-a="close"><div class="sheet glass" onclick="event.stopPropagation()" role="dialog" aria-label="Status page">
+    <h2>${esc(m.name)}</h2><div class="url">${esc(m.url)}</div>
+    <div class="banner ${cls}">${x.st==='up'?'All systems operational':x.st==='waking'?'The app is waking up from sleep':'We are seeing an outage'}</div>
+    <div class="nums"><div><b>${x.up.toFixed(2)}%</b>Uptime</div><div><b>${x.avg} ms</b>Average response</div><div><b>${m.checks.length}</b>Checks recorded</div></div>
+    <h3>Response time</h3>${spark(m)}
+    <h3>Last 60 checks</h3><div class="bars">${bars(m,60)}</div>
+    <div class="legend"><span style="--c:var(--ok)">Healthy</span><span style="--c:var(--warn)">Cold start</span><span style="--c:var(--bad)">Failed</span></div>
+    <h3>Recent incidents</h3>${inc.length?inc.map(i=>`<div class="inc"><b>Outage, ${i.n} failed check${i.n>1?'s':''}</b><span>${new Date(i.t).toLocaleTimeString()}</span></div>`).join(''):'<div class="inc"><span>No incidents in this window.</span></div>'}
+    <h3>Public link</h3><div class="link"><code>${pub}</code><button data-a="copy" data-t="${pub}">Copy link</button></div>
+    <div class="acts" style="margin-top:20px"><button class="main" data-a="close">Close</button></div></div></div>`;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a,m=M.find(x=>x.id===b.dataset.id);
+  if(a==='close'){if(e.target.closest('.sheet')&&!e.target.closest('button'))return;openId=null}
+  else if(a==='open')openId=m.id;
+  else if(a==='wake'){api('/monitors/'+m.id+'/ping',{method:'POST'}).then(load);return}
+  else if(a==='out'){return}
+  else if(a==='del'){api('/monitors/'+m.id,{method:'DELETE'}).then(load);return}
+  else if(a==='copy'){try{navigator.clipboard.writeText(b.dataset.t)}catch(e){}b.textContent='Copied';return}
+  save();render();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openId){openId=null;render()}});
+$('#add').addEventListener('submit',e=>{
+  e.preventDefault();const f=e.target;
+  api('/monitors',{method:'POST',body:{name:$('#n').value.trim(),url:$('#u').value.trim(),sleepy:$('#k').value==='1'}}).then(m=>{fresh.add(m._id);f.reset();return load()}).catch(er=>alert(er.message));
+});
+setInterval(()=>{if(tok&&$('#app').classList.contains('on'))load()},10000);
+(function(){const c=$('#rain'),x=c.getContext('2d');let w,h,d;const ch='01<>{}/=+*$#'.split('');
+function size(){w=c.width=innerWidth;h=c.height=innerHeight;d=Array.from({length:Math.ceil(w/18)},()=>Math.random()*h/18)}
+size();addEventListener('resize',size);
+if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+setInterval(()=>{x.fillStyle='rgba(2,6,4,.14)';x.fillRect(0,0,w,h);x.font='15px monospace';
+d.forEach((v,i)=>{x.fillStyle=Math.random()<.04?'#d9ffe8':'#00ff66';x.fillText(ch[Math.random()*ch.length|0],i*18,v*18);if(v*18>h&&Math.random()>.975)d[i]=0;d[i]+=.5})},60)})();
+(function(){const el=$('.note'),t=el.textContent;el.textContent='';let i=0;const id=setInterval(()=>{el.textContent=t.slice(0,++i);if(i>=t.length)clearInterval(id)},16)})();
+
+/* routing, auth, landing, github */
+const ss=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let mode='login';
+function route(){
+  const h=location.hash||'#/',u=ss('pulse.session');let v='landing';
+  if(h.startsWith('#/login')||h.startsWith('#/signup')){mode=h.includes('signup')?'signup':'login';v=u?'app':'auth';if(u){location.replace('#/app');return}}
+  else if(h.startsWith('#/app')){if(!u){location.replace('#/login');return}v='app'}
+  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id===v));
+  scrollTo(0,0);
+  if(v==='auth')authUI();
+  if(v==='app'){$('#who').textContent=u.name;load().then(()=>{M.forEach(m=>fresh.add(m.id));render()})}
+}
+function authUI(){
+  const su=mode==='signup';
+  $('#authbox').innerHTML=`<h2>${su?'Create your account':'Welcome back'}</h2><p class="sub">${su?'Start monitoring your apps in a minute.':'Log in to see your monitors.'}</p><form id="af">${su?'<input id="an" placeholder="Your name" required maxlength="40" autocomplete="name">':''}<input id="ae" type="email" placeholder="you@example.com" required autocomplete="email"><input id="ap" type="password" placeholder="Password, 6 or more characters" required minlength="6" autocomplete="${su?'new-password':'current-password'}"><div class="err" id="aerr" role="alert"></div><button class="main" type="submit">${su?'Create account':'Log in'}</button></form><p class="sub">${su?'Already have an account?':'New to Pulse?'} <a href="#/${su?'login':'signup'}">${su?'Log in':'Create an account'}</a></p><p class="sub" style="margin-top:12px">Passwords are hashed with bcrypt and sessions use signed JWTs.</p>`;
+  $('#af').onsubmit=async e=>{e.preventDefault();const er=$('#aerr');er.textContent='';
+    try{const b={email:$('#ae').value.trim(),password:$('#ap').value};if(su)b.name=$('#an').value.trim();
+      const r=await api('/auth/'+(su?'signup':'login'),{method:'POST',body:b});tok=r.token;localStorage.setItem('pulse.token',tok);sv('pulse.session',r.user);location.hash='#/app'}
+    catch(x){er.textContent=x.message}
+  };
+}
+addEventListener('hashchange',route);
+$('#out').onclick=logout;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  $('#monitors').style.display=t.dataset.tab==='monitors'?'':'none';$('#github').style.display=t.dataset.tab==='github'?'':'none'});
+/* landing terminal */
+const LA=['oath.onrender.com','shopqr-api.onrender.com','portfolio.vercel.app','devproof.onrender.com'];
+setInterval(()=>{const L=$('#log');if(!L||!L.offsetParent)return;const a=LA[Math.random()*LA.length|0],r=Math.random(),d=document.createElement('div');
+  if(r<.12){d.className='w';d.textContent=`${new Date().toLocaleTimeString()}  ${a}  cold start, waking up...`}
+  else if(r<.17){d.className='b';d.textContent=`${new Date().toLocaleTimeString()}  ${a}  502 retrying`}
+  else d.innerHTML=`${new Date().toLocaleTimeString()}  ${a}  <span>200 OK</span>  ${Math.round(90+Math.random()*180)}ms`;
+  L.appendChild(d);while(L.children.length>8)L.firstChild.remove()},900);
+/* github scan via server */
+$('#gh').addEventListener('submit',async e=>{
+  e.preventDefault();const u=$('#gu').value.trim().replace(/^@/,''),o=$('#ghout');
+  if(!/^[a-z\d](?:[a-z\d-]{0,38})$/i.test(u)){o.innerHTML='<div class="err">Enter a valid GitHub username, like manashwebdev.</div>';return}
+  o.innerHTML='<div class="grid"><div class="card glass sk"></div><div class="card glass sk"></div><div class="card glass sk"></div></div>';
+  try{const rs=await api('/github/'+encodeURIComponent(u));
+    o.innerHTML=`<div class="ghhead"><b>${esc(u)}</b> has ${rs.length} public repos</div><div class="grid">`+rs.map((r,i)=>`<article class="card glass fresh" style="animation-delay:${Math.min(i,12)*60}ms"><div class="name">${esc(r.name)}</div><div class="url">${esc(r.description||'No description')}</div><div class="meta"><span><i class="dot" style="--c:#00ff66"></i>${esc(r.language||'Other')}</span><span>★ ${r.stars}</span><span>Forks ${r.forks}</span><span>Updated ${new Date(r.updated).toLocaleDateString()}</span></div><div class="acts"><a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Open repo</a>${r.homepage?`<button data-mon="${esc(r.name)}" data-h="${esc(r.homepage)}">Monitor this app</button>`:''}</div></article>`).join('')+'</div>'}
+  catch(x){o.innerHTML=`<div class="err">${esc(x.message)}</div>`}});
+$('#ghout').addEventListener('click',async e=>{const b=e.target.closest('[data-mon]');if(!b)return;b.disabled=true;
+  try{await api('/monitors',{method:'POST',body:{name:b.dataset.mon,url:b.dataset.h,sleepy:true}});await load();document.querySelector('[data-tab=monitors]').click()}catch(x){b.disabled=false;alert(x.message)}});
+route();
+</script></body></html>

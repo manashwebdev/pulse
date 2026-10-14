@@ -1,0 +1,17 @@
+{
+  "name": "pulse-monitor",
+  "version": "1.0.0",
+  "description": "Keep-alive pinger, uptime charts and public status pages for free-tier apps",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0",
+    "node-cron": "^3.0.3"
+  }
+}
